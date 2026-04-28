@@ -702,7 +702,14 @@ const ST = {
   tfFilter: 'all',
   scanning: false,
   autoTimer:null,
-  todayCnt: 0,
+  todayCnt: (()=>{
+    // 恢復今日計數：比對日期
+    const key='y3_today_date', cntKey='y3_today_cnt';
+    const savedDate=localStorage.getItem(key);
+    const today=new Date().toLocaleDateString('zh-TW');
+    if(savedDate===today){ return parseInt(localStorage.getItem(cntKey)||'0'); }
+    else{ localStorage.setItem(key,today); localStorage.setItem(cntKey,'0'); return 0; }
+  })(),
 };
 
 // ═══════════════════════════════════════════════
@@ -970,10 +977,18 @@ function calcConf(pre, dir) {
   let score = 0;
   const det = [];
   const add = (ok, lbl) => { if(ok) score++; det.push({ok, lbl}); };
-  add((dir==='long' && pre.e20>pre.e50 && pre.stDir===1) || (dir==='short' && pre.e20<pre.e50 && pre.stDir===-1), '趨勢一致');
-  add((dir==='long' && (pre.wt==='bull'||pre.wt==='bull_weak')) || (dir==='short' && (pre.wt==='bear'||pre.wt==='bear_weak')), 'WT動量');
-  add((dir==='long' && pre.obv==='bull') || (dir==='short' && pre.obv==='bear'), 'OBV量能');
-  add((dir==='long' && pre.rsi<65 && pre.mfi<70) || (dir==='short' && pre.rsi>35 && pre.mfi>30), '動量合理');
+  // 1. 趨勢：EMA排列 + Supertrend 同向（嚴格）
+  add((dir==='long'  && pre.e20>pre.e50 && pre.stDir===1)  ||
+      (dir==='short' && pre.e20<pre.e50 && pre.stDir===-1), '趨勢一致');
+  // 2. WaveTrend：只有強信號才算（不包含 weak）
+  add((dir==='long'  && pre.wt==='bull') ||
+      (dir==='short' && pre.wt==='bear'), 'WT強信號');
+  // 3. OBV：量能方向
+  add((dir==='long'  && pre.obv==='bull') ||
+      (dir==='short' && pre.obv==='bear'), 'OBV量能');
+  // 4. 動量合理：RSI/MFI 在合理區間（加嚴，避免極端）
+  add((dir==='long'  && pre.rsi<55 && pre.rsi>25 && pre.mfi<60) ||
+      (dir==='short' && pre.rsi>45 && pre.rsi<75 && pre.mfi>40), '動量合理');
   add(pre.skScore>=3 || (pre.sqzMom>0&&dir==='long') || (pre.sqzMom<0&&dir==='short'), '賽克斯/壓縮');
   return {score, det};
 }
@@ -1073,10 +1088,24 @@ async function analyze(sym, tf) {
   // ML 勝率
   const s=ST.ml.samples, w=ST.ml.wins;
   let wr;
-  if      (s < 30)  { const q=Math.min((diff/15+adx.adx/60+conf.score/5)/3,1); wr=+(50+q*25).toFixed(1); }
-  else if (s < 200) { const hw=w/s*100, wt2=s/200; wr=+(hw*wt2+58*(1-wt2)).toFixed(1); }
-  else              { wr=+(w/s*100).toFixed(1); }
-  wr = Math.min(95, +(wr+conf.score*2).toFixed(1));
+  if (s < 10) {
+    // 樣本極少：依特徵品質給 50~65%（不超過65，誠實顯示不確定性）
+    const q=Math.min((diff/15+adx.adx/60+conf.score/5)/3,1);
+    wr=+(50+q*15).toFixed(1);
+  } else if (s < 50) {
+    // 樣本少：歷史勝率 + 保守基準 混合
+    const hw=w/Math.max(s,1)*100, wt2=s/50;
+    wr=+(hw*wt2+55*(1-wt2)).toFixed(1);
+  } else if (s < 200) {
+    // 中量樣本：主要依賴歷史勝率
+    const hw=w/s*100, wt2=Math.min(s/200,0.9);
+    wr=+(hw*wt2+55*(1-wt2)).toFixed(1);
+  } else {
+    // 充足樣本：完全使用歷史勝率
+    wr=+(w/s*100).toFixed(1);
+  }
+  // conf 加成上限 2.5%
+  wr = Math.min(88, +(wr + Math.min(conf.score*0.5, 2.5)).toFixed(1));
 
   const minWR = parseInt(gv('s-wr')||gv('s-wr-m')||'0');
   if (wr < minWR) return null;
@@ -1291,7 +1320,13 @@ function updateMLW(feats, win) {
 }
 
 function autoML(sigs) {
-  sigs.forEach(s => { if(s.conf>=4){ ST.ml.samples++; ST.ml.wins++; updateMLW(s.feats,true); } });
+  // 修正：不再偽造 WIN，高信心訊號只更新ML權重，不影響勝率統計
+  // 勝率統計只來自真實平倉（closePos）和手動記錄（recordWin/Loss）
+  sigs.forEach(s => {
+    if(s.conf>=4 && s.feats) {
+      updateMLW(s.feats, true); // 更新權重，但不計入 wins/samples
+    }
+  });
   sv(KEY.ml, ST.ml);
   updateMLDisplay();
 }
@@ -1327,7 +1362,12 @@ async function updateMarket() {
     const pEl = ge(`mp-${s}`), cEl = ge(`mc-${s}`);
     if (pEl) pEl.textContent = p>1000 ? '$'+p.toFixed(0) : p>100 ? p.toFixed(2) : p.toFixed(4);
     if (cEl) { cEl.textContent = (pct>=0?'+':'')+pct+'%'; cEl.style.color = pct>=0?'var(--grn)':'var(--red)'; }
-    if (s==='BTC') { const e=ge('tb-btc'); if(e) e.textContent='$'+Math.round(p/1000)+'k'; }
+    if (s==='BTC') {
+      const e=ge('tb-btc'); if(e) e.textContent='$'+Math.round(p/1000)+'k';
+      // BTC 4h 變化
+      const e4h=ge('tb-btc4h');
+      if(e4h){ e4h.textContent=(pct>=0?'+':'')+pct+'%'; e4h.style.color=pct>=0?'var(--grn)':'var(--red)'; }
+    }
   }
 }
 
@@ -1414,7 +1454,7 @@ function renderSignals() {
         <td>${dots(s.conf)}</td>
         <td>${s.adx}</td>
         <td style="${s.rsi<30?'color:var(--grn)':s.rsi>70?'color:var(--red)':''}">${s.rsi}</td>
-        <td style="font-size:9px">${wtLabel(s)}</td>
+        <td style="font-size:9px">${s.wt1!=null?s.wt1.toFixed(1):'—'}<br><span style='font-size:8px;color:var(--t3)'>${wtLabel(s)}</span></td>
         <td style="font-size:9px">${obvLabel(s)}</td>
         <td><span class="grade-tag ${gc}">${s.grade||'—'}</span></td>
         <td style="font-size:9px">${sk}</td>
@@ -1767,8 +1807,20 @@ function drawEquityChart(){
   ctx.scale(dpr,dpr);
 
   const W=rect.width, H=120;
+  // 確保至少有初始資料點
+  if(!ST_EXT.equityCurve || ST_EXT.equityCurve.length===0){
+    ST_EXT.equityCurve = [ST.paper.capital||10000];
+  }
   const data = ST_EXT.equityCurve;
-  if(data.length<2){ ctx.fillStyle='rgba(74,101,133,.3)'; ctx.font='11px monospace'; ctx.fillText('尚無數據',W/2-30,H/2); return; }
+  // 沒有平倉記錄時顯示初始基準線
+  if(data.length<2){
+    ctx.strokeStyle='rgba(0,200,255,.3)'; ctx.lineWidth=1; ctx.setLineDash([4,4]);
+    ctx.beginPath();ctx.moveTo(0,H/2);ctx.lineTo(W,H/2);ctx.stroke();ctx.setLineDash([]);
+    ctx.fillStyle='rgba(74,101,133,.6)'; ctx.font='10px JetBrains Mono, monospace';
+    ctx.fillText('$10,000 基準線', W/2-40, H/2-8);
+    ctx.fillText('平倉後顯示曲線', W/2-40, H/2+16);
+    return;
+  }
 
   const mn=Math.min(...data)*0.995, mx=Math.max(...data)*1.005;
   const range=mx-mn||1;
