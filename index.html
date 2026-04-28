@@ -299,12 +299,13 @@ input[type=number]:focus{outline:none;border-color:var(--acc)}
 .chart-canvas{width:100%;height:100%;display:block}
 
 /* ─ ALERT BANNER ─ */
-.alert-banner{display:none;position:fixed;top:54px;left:0;right:0;z-index:150;
-  background:rgba(0,232,122,.12);border-bottom:1px solid rgba(0,232,122,.3);
-  padding:10px 20px;font-family:var(--mono);font-size:12px;color:var(--grn);
-  display:flex;align-items:center;justify-content:space-between;gap:12px}
+.alert-banner{display:none;position:fixed;bottom:24px;right:20px;z-index:400;
+  background:rgba(8,14,26,.95);border:1px solid rgba(0,232,122,.4);
+  border-radius:8px;padding:10px 14px;font-family:var(--mono);font-size:11px;
+  color:var(--grn);box-shadow:0 4px 20px rgba(0,0,0,.5);
+  flex-direction:column;gap:4px;max-width:280px;backdrop-filter:blur(10px)}
 .alert-banner.show{display:flex}
-.alert-banner.warn{background:rgba(255,51,85,.1);border-color:rgba(255,51,85,.3);color:var(--red)}
+.alert-banner.warn{border-color:rgba(255,51,85,.4);color:var(--red)}
 
 /* ─ QUICK FILTER BTNS ─ */
 .qf-wrap{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px}
@@ -679,6 +680,18 @@ function sv(k, v) {
 // ═══════════════════════════════════════════════
 // 全域狀態（全部從 localStorage 載入）
 // ═══════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════
+
+// ── 全域新狀態 ──
+let ST_EXT = {
+  dirFilter: 'all',   // 方向過濾
+  sortBy:    'conf',  // 排序方式
+  soundOn:   ld('y3_sound', false),
+  btcPct:    0,
+  equityCurve: ld('y3_equity', [10000]),
+  dailyLog:  ld('y3_daily', {}),
+};
+
 const ST = {
   signals:  ld(KEY.sigs,  []),
   positions:ld(KEY.pos,   []),
@@ -1174,6 +1187,7 @@ async function startScan() {
 
   ge('last-scan').textContent = '上次：' + new Date().toLocaleTimeString('zh-TW',{hour12:false});
   renderAll();
+  setTimeout(()=>{renderSignals();drawEquityChart();updateDailyReport();},800);
   setTimeout(() => ge('prog-wrap').classList.remove('show'), 3000);
 }
 
@@ -1696,17 +1710,6 @@ init();
 
 // ═══════════════════════════════════════════════════════
 // 新功能 JS
-// ═══════════════════════════════════════════════════════
-
-// ── 全域新狀態 ──
-let ST_EXT = {
-  dirFilter: 'all',   // 方向過濾
-  sortBy:    'conf',  // 排序方式
-  soundOn:   ld('y3_sound', false),
-  btcPct:    0,
-  equityCurve: ld('y3_equity', [10000]),
-  dailyLog:  ld('y3_daily', {}),
-};
 
 // ── 1. 音效提醒 ──
 function playAlert(type='signal'){
@@ -1817,9 +1820,9 @@ function drawEquityChart(){
 // ── 3. BTC 崩跌監控 ──
 async function checkBTCCrash(){
   try{
-    const bars=await klines('BTC','1H',5);
-    if(!bars||bars.length<4)return;
-    const prev=bars[bars.length-4].c, last=bars[bars.length-1].c;
+    const bars=await klines('BTC','4H',3);
+    if(!bars||bars.length<2)return;
+    const prev=bars[0].c, last=bars[bars.length-1].c;
     const pct=((last-prev)/prev*100);
     ST_EXT.btcPct=pct;
     const banner=document.getElementById('btc-alert');
@@ -1928,14 +1931,17 @@ function updateEquityCurve(){
 // ── 過濾+排序整合到 filteredSigs ──
 // (覆蓋原本的 filteredSigs)
 function filteredSigs(){
-  let sigs = ST.tfFilter==='all'?ST.signals:ST.signals.filter(s=>s.tf===ST.tfFilter);
+  // 防護：確保 ST.signals 存在
+  if(!ST||!ST.signals) return [];
+  let sigs = ST.tfFilter==='all'?[...ST.signals]:ST.signals.filter(s=>s&&s.tf===ST.tfFilter);
   // 方向過濾
-  if(ST_EXT.dirFilter==='long') sigs=sigs.filter(s=>s.dir==='long');
-  else if(ST_EXT.dirFilter==='short') sigs=sigs.filter(s=>s.dir==='short');
+  if(ST_EXT&&ST_EXT.dirFilter==='long') sigs=sigs.filter(s=>s.dir==='long');
+  else if(ST_EXT&&ST_EXT.dirFilter==='short') sigs=sigs.filter(s=>s.dir==='short');
   // 排序
-  if(ST_EXT.sortBy==='conf') sigs=[...sigs].sort((a,b)=>b.conf-a.conf||b.wr-a.wr);
-  else if(ST_EXT.sortBy==='wr') sigs=[...sigs].sort((a,b)=>b.wr-a.wr);
-  else sigs=[...sigs].sort((a,b)=>b.ts-a.ts);
+  const sortBy=ST_EXT?.sortBy||'conf';
+  if(sortBy==='conf') sigs=sigs.sort((a,b)=>((b.conf||0)-(a.conf||0))||((b.wr||0)-(a.wr||0)));
+  else if(sortBy==='wr') sigs=sigs.sort((a,b)=>(b.wr||0)-(a.wr||0));
+  else sigs=sigs.sort((a,b)=>(b.ts||0)-(a.ts||0));
   return sigs;
 }
 
