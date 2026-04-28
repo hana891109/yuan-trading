@@ -293,6 +293,45 @@ input[type=number]:focus{outline:none;border-color:var(--acc)}
   .sig-tbl-wrap{display:block}
 }
 .sig-cards-wrap{display:none}
+
+/* ─ CHART ─ */
+.chart-wrap{position:relative;height:120px;width:100%}
+.chart-canvas{width:100%;height:100%;display:block}
+
+/* ─ ALERT BANNER ─ */
+.alert-banner{display:none;position:fixed;top:54px;left:0;right:0;z-index:150;
+  background:rgba(0,232,122,.12);border-bottom:1px solid rgba(0,232,122,.3);
+  padding:10px 20px;font-family:var(--mono);font-size:12px;color:var(--grn);
+  display:flex;align-items:center;justify-content:space-between;gap:12px}
+.alert-banner.show{display:flex}
+.alert-banner.warn{background:rgba(255,51,85,.1);border-color:rgba(255,51,85,.3);color:var(--red)}
+
+/* ─ QUICK FILTER BTNS ─ */
+.qf-wrap{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px}
+.qf-btn{padding:3px 9px;border-radius:4px;font-family:var(--mono);font-size:9px;
+  cursor:pointer;border:1px solid var(--bd);background:var(--s2);color:var(--t3);
+  transition:.15s;user-select:none}
+.qf-btn:hover{background:var(--s3);color:var(--t1)}
+.qf-btn.on{background:rgba(0,200,255,.1);border-color:var(--acc);color:var(--acc)}
+.qf-btn.long-on{background:rgba(0,232,122,.1);border-color:var(--grn);color:var(--grn)}
+.qf-btn.short-on{background:rgba(255,51,85,.1);border-color:var(--red);color:var(--red)}
+
+/* ─ PNL BADGE on position ─ */
+.pnl-badge{font-family:var(--mono);font-size:12px;font-weight:700;
+  padding:2px 8px;border-radius:4px}
+.pnl-pos{background:rgba(0,232,122,.1);color:var(--grn)}
+.pnl-neg{background:rgba(255,51,85,.1);color:var(--red)}
+
+/* ─ DAILY REPORT ─ */
+.day-row{display:flex;justify-content:space-between;align-items:center;
+  padding:6px 0;border-bottom:1px solid rgba(24,40,64,.4);font-family:var(--mono);font-size:10px}
+.day-row:last-child{border-bottom:none}
+
+/* ─ SORT BAR ─ */
+.sort-bar{display:flex;gap:4px;align-items:center;margin-bottom:6px}
+.sort-btn{padding:2px 7px;border-radius:3px;font-family:var(--mono);font-size:9px;
+  cursor:pointer;border:1px solid var(--bd);background:transparent;color:var(--t3);transition:.15s}
+.sort-btn.on{border-color:var(--acc);color:var(--acc)}
 </style>
 </head>
 <body>
@@ -307,11 +346,13 @@ input[type=number]:focus{outline:none;border-color:var(--acc)}
     <div class="tb-it"><div class="tb-lbl">今日訊號</div><div class="tb-val c-yel" id="tb-sig">0</div></div>
     <div class="tb-it"><div class="tb-lbl">ML樣本</div><div class="tb-val c-pur" id="tb-ml">0</div></div>
     <div class="tb-it"><div class="tb-lbl">FG指數</div><div class="tb-val" id="tb-fg">—</div></div>
+    <div class="tb-it"><div class="tb-lbl">BTC 4h</div><div class="tb-val" id="tb-btc4h">—</div></div>
     <div class="tb-it"><div class="tb-lbl">BTC</div><div class="tb-val c-acc" id="tb-btc">—</div></div>
     <div class="tb-it"><div class="tb-lbl">時間</div><div class="tb-val" id="tb-time">--:--</div></div>
   </div>
   <div class="tb-right">
     <div class="sw-led" id="sw-led"></div>
+    <button class="ib" id="sound-btn" onclick="toggleSound()">🔇 音效 OFF</button>
     <button class="ib" id="auto-btn" onclick="toggleAuto()">⏰ 自動</button>
     <button class="ib grn" onclick="startScan()">▶ 掃描</button>
     <button class="ib" onclick="openModal('modal-cfg')">⚙</button>
@@ -379,11 +420,41 @@ input[type=number]:focus{outline:none;border-color:var(--acc)}
       <div class="stat-box"><div class="stat-lbl">持倉中</div><div class="stat-val" id="st-pos">0</div><div class="stat-sub">模擬倉位</div></div>
     </div>
 
+    <!-- 資金曲線圖 -->
+    <div class="card">
+      <div class="card-hd">
+        <span class="card-title">資金曲線</span>
+        <span style="font-family:var(--mono);font-size:9px;color:var(--t3)" id="chart-info">模擬資金 $10,000</span>
+      </div>
+      <div class="card-body" style="padding:10px">
+        <div class="chart-wrap"><canvas id="equity-chart" class="chart-canvas"></canvas></div>
+      </div>
+    </div>
+
+    <!-- BTC 崩跌警告 banner -->
+    <div class="alert-banner" id="btc-alert">
+      <span id="btc-alert-txt">⚠️ BTC 崩跌警告</span>
+      <button onclick="document.getElementById('btc-alert').classList.remove('show')" style="background:none;border:none;color:inherit;cursor:pointer;font-size:14px">✕</button>
+    </div>
+
     <!-- 桌面表格 -->
     <div class="card sig-tbl-wrap">
       <div class="card-hd">
         <span class="card-title">訊號記錄 <span id="sig-cnt-d" class="c-t3">(0)</span></span>
-        <div style="display:flex;gap:8px;align-items:center">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <!-- 排序 -->
+          <div class="sort-bar">
+            <span style="font-family:var(--mono);font-size:9px;color:var(--t3)">排序:</span>
+            <button class="sort-btn on" id="sort-conf" onclick="setSortBy('conf',this)">信心</button>
+            <button class="sort-btn" id="sort-wr" onclick="setSortBy('wr',this)">勝率</button>
+            <button class="sort-btn" id="sort-time" onclick="setSortBy('time',this)">時間</button>
+          </div>
+          <!-- 快速篩選 -->
+          <div class="qf-wrap" style="margin-bottom:0">
+            <button class="qf-btn on" id="qf-all" onclick="setDirFilter('all',this)">全部</button>
+            <button class="qf-btn" id="qf-long" onclick="setDirFilter('long',this)">▲多單</button>
+            <button class="qf-btn" id="qf-short" onclick="setDirFilter('short',this)">▼空單</button>
+          </div>
           <span style="font-family:var(--mono);font-size:9px;color:var(--t3)" id="tf-lbl">全部週期</span>
           <button onclick="clearSigs()" style="background:none;border:none;color:var(--t3);font-size:9px;cursor:pointer;font-family:var(--mono)">清除</button>
         </div>
@@ -461,6 +532,15 @@ input[type=number]:focus{outline:none;border-color:var(--acc)}
     <div class="card">
       <div class="card-hd"><span class="card-title">賽克斯策略訊號</span></div>
       <div class="card-body" style="padding:9px 13px" id="sk-list"></div>
+    </div>
+    <div class="card">
+      <div class="card-hd">
+        <span class="card-title">每日報告</span>
+        <span style="font-family:var(--mono);font-size:9px;color:var(--t3)" id="daily-date"></span>
+      </div>
+      <div class="card-body" style="padding:9px 13px" id="daily-report">
+        <div style="text-align:center;font-family:var(--mono);font-size:10px;color:var(--t3);padding:10px">掃描後生成</div>
+      </div>
     </div>
     <div class="card">
       <div class="card-hd">
@@ -1237,9 +1317,17 @@ async function updateMarket() {
   }
 }
 
-async function updateFG() {
-  const d = await fng();
-  if (d) { const e=ge('tb-fg'); if(e) e.textContent=d.value; }
+async function updateFG(){
+  const d=await fng();
+  if(!d)return;
+  const v=parseInt(d.value);
+  const e=document.getElementById('tb-fg');
+  if(e){
+    const mood=v<=24?'😱 極恐懼':v<=49?'😨 恐懼':v<=74?'😊 貪婪':'🤑 極貪婪';
+    e.textContent=v+' '+mood.split(' ')[0];
+    e.title=mood;
+    e.style.color=v<=24?'var(--acc)':v<=49?'var(--grn)':v<=74?'var(--yel)':'var(--red)';
+  }
 }
 
 // ═══════════════════════════════════════════════
@@ -1253,10 +1341,8 @@ function filterTF(tf) {
   renderSignals();
 }
 
-function filteredSigs() {
-  return ST.tfFilter==='all' ? ST.signals : ST.signals.filter(s=>s.tf===ST.tfFilter);
-}
 
+// filteredSigs → 新版
 // ═══════════════════════════════════════════════
 // 渲染
 // ═══════════════════════════════════════════════
@@ -1394,6 +1480,7 @@ function renderPositions() {
         <div class="pos-cell"><div class="pos-cell-lbl">止盈3</div><div class="pos-cell-val c-pur">${fmtP(pos.tp3)}</div></div>
         <div class="pos-cell"><div class="pos-cell-lbl">手續費</div><div class="pos-cell-val c-t3">$${pos.fee}</div></div>
       </div>
+      <div style="margin:6px 0;font-family:var(--mono);font-size:10px;color:var(--t3)">浮動損益：<span id="fpnl-${pos.id}" class="pnl-badge">計算中...</span></div>
       <div class="btn-row">
         <button class="btn btn-grn" onclick="closePos('${pos.id}','TP1平倉',${pos.tp1})">🎯 TP1平倉</button>
         <button class="btn btn-red" onclick="closePos('${pos.id}','SL平倉',${pos.sl})">🛑 SL平倉</button>
@@ -1606,6 +1693,252 @@ function init() {
 }
 
 init();
+
+// ═══════════════════════════════════════════════════════
+// 新功能 JS
+// ═══════════════════════════════════════════════════════
+
+// ── 全域新狀態 ──
+let ST_EXT = {
+  dirFilter: 'all',   // 方向過濾
+  sortBy:    'conf',  // 排序方式
+  soundOn:   ld('y3_sound', false),
+  btcPct:    0,
+  equityCurve: ld('y3_equity', [10000]),
+  dailyLog:  ld('y3_daily', {}),
+};
+
+// ── 1. 音效提醒 ──
+function playAlert(type='signal'){
+  if(!ST_EXT.soundOn) return;
+  try{
+    const ctx = new (window.AudioContext||window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    if(type==='signal'){
+      osc.frequency.setValueAtTime(880,ctx.currentTime);
+      osc.frequency.setValueAtTime(1100,ctx.currentTime+0.1);
+      gain.gain.setValueAtTime(0.3,ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.4);
+      osc.start(ctx.currentTime); osc.stop(ctx.currentTime+0.4);
+    } else if(type==='win'){
+      [523,659,784].forEach((f,i)=>{
+        const o=ctx.createOscillator(),g=ctx.createGain();
+        o.connect(g);g.connect(ctx.destination);
+        o.frequency.value=f;
+        g.gain.setValueAtTime(0.2,ctx.currentTime+i*0.1);
+        g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+i*0.1+0.2);
+        o.start(ctx.currentTime+i*0.1);o.stop(ctx.currentTime+i*0.1+0.2);
+      });
+    } else if(type==='loss'){
+      osc.frequency.setValueAtTime(300,ctx.currentTime);
+      osc.frequency.setValueAtTime(200,ctx.currentTime+0.2);
+      gain.gain.setValueAtTime(0.2,ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.4);
+      osc.start(ctx.currentTime); osc.stop(ctx.currentTime+0.4);
+    }
+  }catch(e){}
+}
+
+function toggleSound(){
+  ST_EXT.soundOn = !ST_EXT.soundOn;
+  sv('y3_sound', ST_EXT.soundOn);
+  const btn = document.getElementById('sound-btn');
+  if(btn) btn.textContent = ST_EXT.soundOn ? '🔊 音效 ON' : '🔇 音效 OFF';
+  if(ST_EXT.soundOn) playAlert('signal');
+  toast(ST_EXT.soundOn ? '🔊 音效已開啟' : '🔇 音效已關閉');
+}
+
+// ── 2. 資金曲線圖 ──
+function drawEquityChart(){
+  const canvas = document.getElementById('equity-chart');
+  if(!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio||1;
+  const rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width  = rect.width * dpr;
+  canvas.height = 120 * dpr;
+  canvas.style.width  = rect.width+'px';
+  canvas.style.height = '120px';
+  ctx.scale(dpr,dpr);
+
+  const W=rect.width, H=120;
+  const data = ST_EXT.equityCurve;
+  if(data.length<2){ ctx.fillStyle='rgba(74,101,133,.3)'; ctx.font='11px monospace'; ctx.fillText('尚無數據',W/2-30,H/2); return; }
+
+  const mn=Math.min(...data)*0.995, mx=Math.max(...data)*1.005;
+  const range=mx-mn||1;
+  const toY=v=>H-10-((v-mn)/range)*(H-20);
+  const toX=i=>(i/(data.length-1))*W;
+
+  // 背景格線
+  ctx.strokeStyle='rgba(26,46,72,.4)'; ctx.lineWidth=1;
+  [0.25,0.5,0.75].forEach(r=>{
+    ctx.beginPath();ctx.moveTo(0,H*r);ctx.lineTo(W,H*r);ctx.stroke();
+  });
+
+  // 面積填充
+  const grad=ctx.createLinearGradient(0,0,0,H);
+  const isUp=data[data.length-1]>=data[0];
+  grad.addColorStop(0,isUp?'rgba(0,232,122,.25)':'rgba(255,51,85,.2)');
+  grad.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=grad;
+  ctx.beginPath();
+  ctx.moveTo(toX(0),H);
+  data.forEach((v,i)=>ctx.lineTo(toX(i),toY(v)));
+  ctx.lineTo(toX(data.length-1),H);
+  ctx.closePath();ctx.fill();
+
+  // 折線
+  ctx.strokeStyle=isUp?'#00e87a':'#ff3355';
+  ctx.lineWidth=1.5;ctx.lineJoin='round';
+  ctx.beginPath();
+  data.forEach((v,i)=>i?ctx.lineTo(toX(i),toY(v)):ctx.moveTo(toX(i),toY(v)));
+  ctx.stroke();
+
+  // 標記最新值
+  const last=data[data.length-1];
+  ctx.fillStyle=isUp?'#00e87a':'#ff3355';
+  ctx.font='bold 10px JetBrains Mono, monospace';
+  ctx.fillText('$'+last.toFixed(0), W-70, 12);
+
+  // 初始值
+  ctx.fillStyle='rgba(74,101,133,.8)';
+  ctx.font='9px JetBrains Mono, monospace';
+  ctx.fillText('$'+data[0].toFixed(0), 2, H-2);
+
+  // 更新 info
+  const el=document.getElementById('chart-info');
+  const pct=+((last-data[0])/data[0]*100).toFixed(2);
+  if(el)el.textContent=`$${last.toFixed(0)} (${pct>=0?'+':''}${pct}%)`;
+}
+
+// ── 3. BTC 崩跌監控 ──
+async function checkBTCCrash(){
+  try{
+    const bars=await klines('BTC','1H',5);
+    if(!bars||bars.length<4)return;
+    const prev=bars[bars.length-4].c, last=bars[bars.length-1].c;
+    const pct=((last-prev)/prev*100);
+    ST_EXT.btcPct=pct;
+    const banner=document.getElementById('btc-alert');
+    const txt=document.getElementById('btc-alert-txt');
+    if(pct<=-5&&banner&&txt){
+      txt.textContent=`🚨 BTC 崩跌 ${pct.toFixed(1)}%！建議暫停山寨幣多單`;
+      banner.className='alert-banner warn show';
+      playAlert('loss');
+    } else if(pct>=5&&banner&&txt){
+      txt.textContent=`🚀 BTC 急漲 ${pct.toFixed(1)}%！注意追高風險`;
+      banner.className='alert-banner show';
+    } else if(banner){
+      banner.classList.remove('show');
+    }
+  }catch(e){}
+}
+
+// ── 4. 方向過濾 ──
+function setDirFilter(dir, el){
+  ST_EXT.dirFilter=dir;
+  // 更新所有相關按鈕
+  ['qf-all','qf-long','qf-short','qf-all-m','qf-long-m','qf-short-m'].forEach(id=>{
+    const b=document.getElementById(id);
+    if(!b)return;
+    b.className='qf-btn';
+    if(b.id.includes('all')&&dir==='all')b.classList.add('on');
+    if(b.id.includes('long')&&dir==='long')b.classList.add('long-on');
+    if(b.id.includes('short')&&dir==='short')b.classList.add('short-on');
+  });
+  renderSignals();
+}
+
+// ── 5. 排序 ──
+function setSortBy(by, el){
+  ST_EXT.sortBy=by;
+  document.querySelectorAll('.sort-btn').forEach(b=>b.classList.remove('on'));
+  if(el)el.classList.add('on');
+  renderSignals();
+}
+
+// ── 6. 每日報告 ──
+function updateDailyReport(){
+  const today=new Date().toLocaleDateString('zh-TW');
+  const el=document.getElementById('daily-report');
+  const dateEl=document.getElementById('daily-date');
+  if(dateEl)dateEl.textContent=today;
+  if(!el)return;
+
+  // 今日訊號統計
+  const todaySigs=ST.signals.filter(s=>{
+    const d=new Date(s.ts);
+    return d.toLocaleDateString('zh-TW')===today;
+  });
+  const longSigs=todaySigs.filter(s=>s.dir==='long').length;
+  const shortSigs=todaySigs.filter(s=>s.dir==='short').length;
+  const highConf=todaySigs.filter(s=>s.conf>=4).length;
+  const avgWR=todaySigs.length?+(todaySigs.reduce((s,r)=>s+r.wr,0)/todaySigs.length).toFixed(1):0;
+
+  // 今日平倉
+  const todayHist=ST.history.filter(h=>{
+    const d=new Date(h.closeTs||0);
+    return d.toLocaleDateString('zh-TW')===today;
+  });
+  const todayWins=todayHist.filter(h=>h.win).length;
+  const todayPnl=todayHist.reduce((s,h)=>s+h.pnl,0).toFixed(2);
+  const todayWR=todayHist.length?+(todayWins/todayHist.length*100).toFixed(1):0;
+
+  el.innerHTML=`
+    <div class="day-row"><span class="c-t3">今日訊號</span><span style="font-family:var(--mono);font-size:11px">${todaySigs.length} 個</span></div>
+    <div class="day-row"><span class="c-t3">多單/空單</span><span style="font-family:var(--mono);font-size:11px"><span class="c-grn">▲${longSigs}</span> / <span class="c-red">▼${shortSigs}</span></span></div>
+    <div class="day-row"><span class="c-t3">高信心(4+/5)</span><span style="font-family:var(--mono);font-size:11px;color:var(--yel)">${highConf} 個</span></div>
+    <div class="day-row"><span class="c-t3">平均勝率</span><span style="font-family:var(--mono);font-size:11px;color:var(--acc)">${avgWR}%</span></div>
+    <div class="day-row"><span class="c-t3">今日平倉</span><span style="font-family:var(--mono);font-size:11px">${todayHist.length} 筆</span></div>
+    <div class="day-row"><span class="c-t3">今日勝率</span><span style="font-family:var(--mono);font-size:11px;color:${todayWR>=60?'var(--grn)':'var(--red)'}">${todayHist.length?todayWR+'%':'—'}</span></div>
+    <div class="day-row"><span class="c-t3">今日損益</span><span style="font-family:var(--mono);font-size:12px;font-weight:700;color:${todayPnl>=0?'var(--grn)':'var(--red)'}">${todayPnl>=0?'+':''}$${Math.abs(todayPnl)}</span></div>`;
+}
+
+// ── 7. 持倉浮盈即時更新 ──
+async function updateFloatingPnl(){
+  if(!ST.positions.length)return;
+  for(const pos of ST.positions){
+    try{
+      const bars=await klines(pos.sym,'5m',2);
+      if(!bars||!bars.length)continue;
+      const curr=bars[bars.length-1].c;
+      const raw=(pos.dir==='long'?(curr-pos.entry):(pos.entry-curr))/pos.entry*pos.leverage*100;
+      const pnl=+(pos.margin*raw/100).toFixed(2);
+      const el=document.getElementById(`fpnl-${pos.id}`);
+      if(el){
+        el.textContent=(pnl>=0?'+':'')+'$'+pnl+' ('+raw.toFixed(1)+'%)';
+        el.className='pnl-badge '+(pnl>=0?'pnl-pos':'pnl-neg');
+      }
+    }catch{}
+    await sleep(200);
+  }
+}
+
+// ── 8. 資金曲線更新（平倉時呼叫）──
+function updateEquityCurve(){
+  ST_EXT.equityCurve.push(+(ST.paper.capital).toFixed(2));
+  if(ST_EXT.equityCurve.length>200)ST_EXT.equityCurve=ST_EXT.equityCurve.slice(-100);
+  sv('y3_equity', ST_EXT.equityCurve);
+  drawEquityChart();
+}
+
+// ── 過濾+排序整合到 filteredSigs ──
+// (覆蓋原本的 filteredSigs)
+function filteredSigs(){
+  let sigs = ST.tfFilter==='all'?ST.signals:ST.signals.filter(s=>s.tf===ST.tfFilter);
+  // 方向過濾
+  if(ST_EXT.dirFilter==='long') sigs=sigs.filter(s=>s.dir==='long');
+  else if(ST_EXT.dirFilter==='short') sigs=sigs.filter(s=>s.dir==='short');
+  // 排序
+  if(ST_EXT.sortBy==='conf') sigs=[...sigs].sort((a,b)=>b.conf-a.conf||b.wr-a.wr);
+  else if(ST_EXT.sortBy==='wr') sigs=[...sigs].sort((a,b)=>b.wr-a.wr);
+  else sigs=[...sigs].sort((a,b)=>b.ts-a.ts);
+  return sigs;
+}
+
 </script>
 </body>
 </html>
