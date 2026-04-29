@@ -297,7 +297,7 @@ input[type=number]{background:var(--bg);border:1px solid var(--bd);color:var(--t
    PAGES (mobile)
 ═══════════════════════════════════════ */
 .m-page{display:none;overflow-y:auto;flex:1;min-height:0;padding:9px;
-  flex-direction:column;gap:8px}
+  flex-direction:column;gap:8px;-webkit-overflow-scrolling:touch}
 .m-page.on{display:flex}
 
 /* ═══════════════════════════════════════
@@ -306,7 +306,7 @@ input[type=number]{background:var(--bg);border:1px solid var(--bd);color:var(--t
 @media(max-width:899px){
   .sb{display:none}
   .mob-nav{display:block}
-  .body{padding-bottom:52px}
+  .body{overflow:hidden;height:calc(100vh - 52px - 52px)}
   .kpi-row{grid-template-columns:repeat(2,1fr);padding:8px}
   .kpi-row .kpi:nth-child(5){grid-column:1/-1}
   .ind-grid{grid-template-columns:repeat(3,1fr)}
@@ -545,7 +545,7 @@ input[type=number]{background:var(--bg);border:1px solid var(--bd);color:var(--t
     </div>
   </div>
 
-</div><!-- /main -->
+<span id="tf-lbl-d" style="display:none"></span></div><!-- /main -->
 
 <!-- ══ MOBILE PAGES ══ -->
 
@@ -603,7 +603,7 @@ input[type=number]{background:var(--bg);border:1px solid var(--bd);color:var(--t
         <button onclick="clearSigs()" style="background:none;border:none;color:var(--t3);font-size:8px;cursor:pointer;font-family:var(--mono)">清除</button>
       </div>
     </div>
-    <div style="padding:8px;display:flex;flex-direction:column;gap:6px" id="sig-cards"></div>
+    <div style="padding:8px;display:flex;flex-direction:column;gap:6px;max-height:calc(100vh - 340px);overflow-y:auto" id="sig-cards"></div>
   </div>
   <div class="card">
     <div class="card-hd"><span class="card-ttl">系統記錄</span><button onclick="clearLog()" style="background:none;border:none;color:var(--t3);font-size:7px;cursor:pointer;font-family:var(--mono)">清除</button></div>
@@ -844,13 +844,13 @@ function restoreSettings() {
   // 週期過濾
   ST.tfFilter = c.tf || 'all';
   document.querySelectorAll('[data-tf]').forEach(b => b.classList.toggle('on', b.dataset.tf === ST.tfFilter));
-  const lbl = ge('tf-lbl'); if(lbl) lbl.textContent = ST.tfFilter === 'all' ? '全部週期' : ST.tfFilter;
+  const lbl = ge('tf-lbl-d'); if(lbl) lbl.textContent = ST.tfFilter === 'all' ? '全部週期' : ST.tfFilter;
   // 自動掃描恢復
   if (c.auto) {
     const mins = c.interval || 5;
     ST.autoTimer = setInterval(startScan, mins * 60000);
     sendSW('START_AUTO_SCAN', {data:{interval:mins}});
-    ge('sw-led')?.classList.add('on');
+    ge('sw-dot')?.classList.add('on');
     ge('auto-btn')?.classList.add('on');
     log('自動掃描已恢復', 'ok');
   }
@@ -1274,11 +1274,13 @@ const sleep   = ms => new Promise(r => setTimeout(r, ms));
 async function startScan() {
   if (ST.scanning) { toast('掃描中...'); return; }
   ST.scanning = true; scanAbort = false;
-  ge('scan-btn').textContent = '⏳ 掃描中...';
-  ge('prog-wrap').classList.add('show');
+
+  // 安全更新所有掃描按鈕和進度條（桌面+手機）
+  ['scan-btn','scan-btn-m'].forEach(id=>{const e=ge(id);if(e)e.textContent='⏳ 掃描中...';});
+  ['prog-wrap','prog-wrap-m'].forEach(id=>{const e=ge(id);if(e)e.style.display='block';});
 
   const tasks = [];
-  COINS.forEach(c => TFS.forEach(tf => tasks.push({c,tf})));
+  COINS.forEach(coin => TFS.forEach(tf => tasks.push({c:coin,tf})));
   let done = 0;
   const total = tasks.length;
   const newSigs = [];
@@ -1287,52 +1289,62 @@ async function startScan() {
 
   for (const {c,tf} of tasks) {
     if (scanAbort) break;
-    ge('prog-fill').style.width = `${done/total*100}%`;
-    ge('prog-lbl').textContent  = `${c} ${tf} · ${done}/${total}`;
+    const pct = done/total*100;
+    const txt = `${c} ${tf} · ${done}/${total}`;
+    // 桌面進度
+    ['prog-fill','prog-fill-m'].forEach(id=>{const e=ge(id);if(e)e.style.width=pct+'%';});
+    ['prog-txt','prog-txt-m'].forEach(id=>{const e=ge(id);if(e)e.textContent=txt;});
     try {
       const r = await analyze(c, tf);
       if (r) {
         newSigs.push(r);
         ST.todayCnt++;
+        localStorage.setItem(KEY.td, ST.todayCnt);
         log(`✅ ${c} ${tf} ${r.dir==='long'?'多':'空'} ${r.wr}% 信心${r.conf}/5`, 'ok');
         if (isPaper()) openPos(r);
       }
-    } catch {}
+    } catch(e) {
+      log(`⚠️ ${c} ${tf} 失敗`, 'w');
+    }
     done++;
     await sleep(80);
   }
 
-  ge('prog-fill').style.width  = '100%';
-  ge('prog-lbl').textContent   = `完成 · ${newSigs.length} 個訊號`;
-  ge('scan-btn').textContent   = '▶ 立即掃描';
+  // 完成
+  ['prog-fill','prog-fill-m'].forEach(id=>{const e=ge(id);if(e)e.style.width='100%';});
+  ['prog-txt','prog-txt-m'].forEach(id=>{const e=ge(id);if(e)e.textContent=`完成 · 找到 ${newSigs.length} 個訊號`;});
+  ['scan-btn','scan-btn-m'].forEach(id=>{const e=ge(id);if(e)e.textContent='▶ 立即掃描';});
   ST.scanning = false;
 
   if (newSigs.length) {
-    newSigs.sort((a,b) => b.conf-a.conf || b.wr-a.wr);
+    newSigs.sort((a,b) => (b.conf||0)-(a.conf||0) || (b.wr||0)-(a.wr||0));
     ST.signals = [...newSigs, ...ST.signals].slice(0, 300);
     sv(KEY.sigs, ST.signals);
-    autoML(newSigs);
-    ge('st-today').textContent = ST.todayCnt;
-    toast(`🎯 ${newSigs.length} 個訊號（信心最高 ${newSigs[0]?.conf}/5）`);
+    ST.todayCnt += newSigs.length;
+    playAlert('signal');
+    toast(`🎯 ${newSigs.length} 個訊號`);
   } else {
-    log('無訊號', 'w'); toast('掃描完成，無訊號');
+    log('無強力訊號', 'w');
+    toast('掃描完成，無訊號');
   }
 
-  ge('last-scan').textContent = '上次：' + new Date().toLocaleTimeString('zh-TW',{hour12:false});
+  const now = new Date().toLocaleTimeString('zh-TW',{hour12:false});
+  ['last-scan','last-scan-m'].forEach(id=>{const e=ge(id);if(e)e.textContent='上次：'+now;});
+
   renderAll();
-  setTimeout(()=>{renderSignals();drawEquityChart();updateDailyReport();},800);
-  setTimeout(() => ge('prog-wrap').classList.remove('show'), 3000);
+  setTimeout(()=>{ renderSignals(); drawEquityChart(); updateDailyReport(); }, 500);
+  setTimeout(()=>{
+    ['prog-wrap','prog-wrap-m'].forEach(id=>{const e=ge(id);if(e)e.style.display='none';});
+  }, 3000);
 }
 
 function stopScan() {
   scanAbort = true; ST.scanning = false;
-  ge('scan-btn').textContent = '▶ 立即掃描';
+  ['scan-btn','scan-btn-m'].forEach(id=>{const e=ge(id);if(e)e.textContent='▶ 立即掃描';});
+  ['prog-wrap','prog-wrap-m'].forEach(id=>{const e=ge(id);if(e)e.style.display='none';});
   log('掃描已停止', 'w');
 }
 
-// ═══════════════════════════════════════════════
-// 自動掃描
-// ═══════════════════════════════════════════════
 function onAutoChange() {
   toggleAuto();
   saveCfg();
@@ -1340,7 +1352,7 @@ function onAutoChange() {
 
 function toggleAuto() {
   const on = ge('s-auto')?.checked || ge('s-auto-m')?.checked;
-  const led = ge('sw-led'), btn = ge('auto-btn');
+  const led = ge('sw-dot'), btn = ge('auto-btn');
   if (on) {
     const mins = parseInt(gv('s-int')||gv('s-int-m')||'5');
     clearInterval(ST.autoTimer);
@@ -1494,7 +1506,7 @@ async function updateFG(){
 function filterTF(tf) {
   ST.tfFilter = tf;
   document.querySelectorAll('[data-tf]').forEach(b => b.classList.toggle('on', b.dataset.tf===tf));
-  const lbl = ge('tf-lbl'); if(lbl) lbl.textContent = tf==='all'?'全部週期':tf;
+  const lbl = ge('tf-lbl-d'); if(lbl) lbl.textContent = tf==='all'?'全部週期':tf;
   saveCfg();
   renderSignals();
 }
@@ -1681,7 +1693,7 @@ function showSig(idx) {
   const s = filteredSigs()[idx] || ST.signals[idx];
   if (!s) return;
   set('m-sig-title', `${s.sym}USDT · ${s.tf} · ${s.dir==='long'?'做多':'做空'} · 信心${s.conf}/5`);
-  const b = ge('m-sig-body'); if(!b)return;
+  const b = ge('msig-body'); if(!b)return;
 
   const confHTML = s.confDet ? `<div class="conf-panel">
     <div class="conf-panel-title">信心分析（${s.conf}/5 指標同向）</div>
@@ -1760,7 +1772,7 @@ function updateMLDisplay() {
     : s<200
     ? `🟡 中期（${s}/200筆）\n· 混合預測，逐漸準確`
     : `🟢 成熟（${s}筆）\n· 完全ML · 歷史勝率${wr}%`;
-  const ms = ge('ml-st');
+  const ms = ge('ml-stage-txt');
   if (ms) ms.textContent = stage + (s>10&&(s-w)>w*2?'\n⚠️ 虧損率偏高，建議重置ML':'');
 }
 
