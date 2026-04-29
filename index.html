@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#03070f">
 <title>YUAN v3</title>
@@ -24,7 +24,7 @@ body{background:var(--bg);color:var(--t1);font-family:var(--body);
 ::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:2px}
 
 /* ── LAYOUT ── */
-.app{display:flex;flex-direction:column;height:100vh;overflow:hidden;position:relative}
+.app{display:flex;flex-direction:column;height:100vh;overflow:hidden}
 
 /* ── TOPBAR ── */
 .topbar{height:52px;flex-shrink:0;background:rgba(3,7,15,.92);border-bottom:1px solid var(--bd);
@@ -241,7 +241,7 @@ input[type=number]{background:var(--bg);border:1px solid var(--bd);color:var(--t
 .ind-v{font-family:var(--mono);font-size:9px;font-weight:700}
 
 /* ── LOG ── */
-.log-box{height:100px;overflow-y:auto;font-family:var(--mono);font-size:8px;-webkit-overflow-scrolling:touch}
+.log-box{height:120px;overflow-y:auto;font-family:var(--mono);font-size:8px}
 .log-line{display:flex;gap:6px;padding:2px 0;border-bottom:1px solid rgba(23,42,69,.25)}
 .log-t{color:var(--t3);white-space:nowrap;flex-shrink:0;font-size:7px}
 .lc-ok{color:var(--grn)}.lc-w{color:var(--yel)}.lc-e{color:var(--red)}.lc-i{color:var(--acc)}
@@ -296,14 +296,9 @@ input[type=number]{background:var(--bg);border:1px solid var(--bd);color:var(--t
 /* ═══════════════════════════════════════
    PAGES (mobile)
 ═══════════════════════════════════════ */
-.m-page{display:none}
-.m-page.on{
-  display:flex;flex-direction:column;gap:8px;
-  overflow-y:auto;overflow-x:hidden;
-  -webkit-overflow-scrolling:touch;
-  padding:9px 9px calc(9px + var(--safe-b)) 9px;
-  flex:1;min-height:0;
-}
+.m-page{display:none;overflow-y:auto;flex:1;min-height:0;padding:9px;
+  flex-direction:column;gap:8px}
+.m-page.on{display:flex}
 
 /* ═══════════════════════════════════════
    RESPONSIVE
@@ -311,24 +306,17 @@ input[type=number]{background:var(--bg);border:1px solid var(--bd);color:var(--t
 @media(max-width:899px){
   .sb{display:none}
   .mob-nav{display:block}
-  .main{display:none}
-  .sec-tabs{display:none}
-  .tb-stats{display:none}
+  .body{padding-bottom:52px}
   .kpi-row{grid-template-columns:repeat(2,1fr);padding:8px}
   .kpi-row .kpi:nth-child(5){grid-column:1/-1}
   .ind-grid{grid-template-columns:repeat(3,1fr)}
   .px-grid{grid-template-columns:repeat(2,1fr)}
   .pos-grid{grid-template-columns:repeat(2,1fr)}
-  /* 手機版：body 隱藏，讓 m-page 直接在 app 下面 */
-  .body{display:none}
-  .m-pages-wrap{display:flex;flex-direction:column}
-}
-/* 手機版 m-page 容器 */
-@media(max-width:899px){
-  .m-pages-wrap{display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden}
-}
-@media(min-width:900px){
-  .m-pages-wrap{display:none}
+  .sec-tabs{display:none}
+  .main{display:none}
+  .body{overflow:hidden}
+  .tb-stats{display:none}
+  header .logo-text-sub{display:none}
 }
 @media(min-width:900px){
   .mob-nav{display:none}
@@ -338,14 +326,29 @@ input[type=number]{background:var(--bg);border:1px solid var(--bd);color:var(--t
   .tb-stats{display:flex}
 }
 
-/* 手機頁面容器 */
-.m-pages-wrap{
-  display:none;
-  flex:1;
-  min-height:0;
-  overflow:hidden;
-  /* 為 fixed mob-nav 留出空間 */
-  padding-bottom:52px;
+/* ═══ 手機版 (≤899px) ═══ */
+@media(max-width:899px){
+  .sb,.main,.sec-tabs,.tb-stats{display:none!important}
+  .mob-nav{display:block}
+  .kpi-row{grid-template-columns:repeat(2,1fr);padding:8px}
+  .kpi-row .kpi:nth-child(5){grid-column:1/-1}
+  .ind-grid{grid-template-columns:repeat(3,1fr)}
+  .px-grid{grid-template-columns:repeat(2,1fr)}
+  .pos-grid{grid-template-columns:repeat(2,1fr)}
+  .m-pages-wrap{display:flex!important;flex-direction:column;flex:1;min-height:0;overflow:hidden}
+  .m-page.on{
+    display:flex;flex-direction:column;gap:8px;
+    flex:1;min-height:0;
+    overflow-y:scroll;
+    -webkit-overflow-scrolling:touch;
+    padding:9px 9px 70px 9px;
+  }
+}
+/* ═══ 桌面版 (≥900px) ═══ */
+@media(min-width:900px){
+  .mob-nav,.m-pages-wrap{display:none!important}
+  .sb{display:flex;flex-direction:column}
+  .main{display:flex;flex-direction:column}
 }
 </style>
 </head>
@@ -567,7 +570,7 @@ input[type=number]{background:var(--bg);border:1px solid var(--bd);color:var(--t
     </div>
   </div>
 
-<span id="tf-lbl-d" style="display:none"></span></div><!-- /main -->
+</div><!-- /main -->
 
 <!-- ══ MOBILE PAGES ══ -->
 
@@ -626,7 +629,7 @@ input[type=number]{background:var(--bg);border:1px solid var(--bd);color:var(--t
         <button onclick="clearSigs()" style="background:none;border:none;color:var(--t3);font-size:8px;cursor:pointer;font-family:var(--mono)">清除</button>
       </div>
     </div>
-    <div style="padding:8px;display:flex;flex-direction:column;gap:6px;" id="sig-cards"></div>
+    <div style="padding:8px;display:flex;flex-direction:column;gap:6px" id="sig-cards"></div>
   </div>
   <div class="card">
     <div class="card-hd"><span class="card-ttl">系統記錄</span><button onclick="clearLog()" style="background:none;border:none;color:var(--t3);font-size:7px;cursor:pointer;font-family:var(--mono)">清除</button></div>
@@ -718,8 +721,8 @@ input[type=number]{background:var(--bg);border:1px solid var(--bd);color:var(--t
 
 </div><!-- /body -->
 
-</div><!-- /m-pages-wrap -->
 <!-- MOBILE NAV -->
+</div><!-- /m-pages-wrap -->
 <div class="mob-nav">
   <div class="mn-list">
     <div class="mn-it on" id="mn-0" onclick="switchMPage(0)"><div class="mn-icon">📊</div>訊號</div>
@@ -868,13 +871,13 @@ function restoreSettings() {
   // 週期過濾
   ST.tfFilter = c.tf || 'all';
   document.querySelectorAll('[data-tf]').forEach(b => b.classList.toggle('on', b.dataset.tf === ST.tfFilter));
-  const lbl = ge('tf-lbl-d'); if(lbl) lbl.textContent = ST.tfFilter === 'all' ? '全部週期' : ST.tfFilter;
+  const lbl = ge('tf-lbl'); if(lbl) lbl.textContent = ST.tfFilter === 'all' ? '全部週期' : ST.tfFilter;
   // 自動掃描恢復
   if (c.auto) {
     const mins = c.interval || 5;
     ST.autoTimer = setInterval(startScan, mins * 60000);
     sendSW('START_AUTO_SCAN', {data:{interval:mins}});
-    ge('sw-dot')?.classList.add('on');
+    ge('sw-led')?.classList.add('on');
     ge('auto-btn')?.classList.add('on');
     log('自動掃描已恢復', 'ok');
   }
@@ -1298,13 +1301,11 @@ const sleep   = ms => new Promise(r => setTimeout(r, ms));
 async function startScan() {
   if (ST.scanning) { toast('掃描中...'); return; }
   ST.scanning = true; scanAbort = false;
-
-  // 安全更新所有掃描按鈕和進度條（桌面+手機）
-  ['scan-btn','scan-btn-m'].forEach(id=>{const e=ge(id);if(e)e.textContent='⏳ 掃描中...';});
-  ['prog-wrap','prog-wrap-m'].forEach(id=>{const e=ge(id);if(e)e.style.display='block';});
+  ge('scan-btn').textContent = '⏳ 掃描中...';
+  ge('prog-wrap').classList.add('show');
 
   const tasks = [];
-  COINS.forEach(coin => TFS.forEach(tf => tasks.push({c:coin,tf})));
+  COINS.forEach(c => TFS.forEach(tf => tasks.push({c,tf})));
   let done = 0;
   const total = tasks.length;
   const newSigs = [];
@@ -1313,64 +1314,52 @@ async function startScan() {
 
   for (const {c,tf} of tasks) {
     if (scanAbort) break;
-    const pct = done/total*100;
-    const txt = `${c} ${tf} · ${done}/${total}`;
-    // 桌面進度
-    ['prog-fill','prog-fill-m'].forEach(id=>{const e=ge(id);if(e)e.style.width=pct+'%';});
-    ['prog-txt','prog-txt-m'].forEach(id=>{const e=ge(id);if(e)e.textContent=txt;});
+    ge('prog-fill').style.width = `${done/total*100}%`;
+    ge('prog-lbl').textContent  = `${c} ${tf} · ${done}/${total}`;
     try {
       const r = await analyze(c, tf);
       if (r) {
         newSigs.push(r);
         ST.todayCnt++;
-        localStorage.setItem(KEY.td, ST.todayCnt);
         log(`✅ ${c} ${tf} ${r.dir==='long'?'多':'空'} ${r.wr}% 信心${r.conf}/5`, 'ok');
         if (isPaper()) openPos(r);
       }
-    } catch(e) {
-      log(`⚠️ ${c} ${tf} 失敗`, 'w');
-    }
+    } catch {}
     done++;
     await sleep(80);
   }
 
-  // 完成
-  ['prog-fill','prog-fill-m'].forEach(id=>{const e=ge(id);if(e)e.style.width='100%';});
-  ['prog-txt','prog-txt-m'].forEach(id=>{const e=ge(id);if(e)e.textContent=`完成 · 找到 ${newSigs.length} 個訊號`;});
-  ['scan-btn','scan-btn-m'].forEach(id=>{const e=ge(id);if(e)e.textContent='▶ 立即掃描';});
+  ge('prog-fill').style.width  = '100%';
+  ge('prog-lbl').textContent   = `完成 · ${newSigs.length} 個訊號`;
+  ge('scan-btn').textContent   = '▶ 立即掃描';
   ST.scanning = false;
 
   if (newSigs.length) {
-    newSigs.sort((a,b) => (b.conf||0)-(a.conf||0) || (b.wr||0)-(a.wr||0));
+    newSigs.sort((a,b) => b.conf-a.conf || b.wr-a.wr);
     ST.signals = [...newSigs, ...ST.signals].slice(0, 300);
     sv(KEY.sigs, ST.signals);
-    playAlert('signal');
-    // 更新今日訊號計數顯示
-    ['st-today','st-today-m','tb-sig'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent=ST.todayCnt;});
-    localStorage.setItem(KEY.td, ST.todayCnt);
-    toast(`🎯 ${newSigs.length} 個訊號`);
+    autoML(newSigs);
+    ge('st-today').textContent = ST.todayCnt;
+    toast(`🎯 ${newSigs.length} 個訊號（信心最高 ${newSigs[0]?.conf}/5）`);
   } else {
-    log('無強力訊號', 'w');
-    toast('掃描完成，無訊號');
+    log('無訊號', 'w'); toast('掃描完成，無訊號');
   }
 
-  const now = new Date().toLocaleTimeString('zh-TW',{hour12:false});
-  ['last-scan','last-scan-m'].forEach(id=>{const e=ge(id);if(e)e.textContent='上次：'+now;});
-
+  ge('last-scan').textContent = '上次：' + new Date().toLocaleTimeString('zh-TW',{hour12:false});
   renderAll();
-  setTimeout(()=>{ renderSignals(); drawEquityChart(); updateDailyReport(); }, 500);
-  setTimeout(()=>{
-    ['prog-wrap','prog-wrap-m'].forEach(id=>{const e=ge(id);if(e)e.style.display='none';});
-  }, 3000);
+  setTimeout(()=>{renderSignals();drawEquityChart();updateDailyReport();},800);
+  setTimeout(() => ge('prog-wrap').classList.remove('show'), 3000);
 }
 
 function stopScan() {
   scanAbort = true; ST.scanning = false;
-  ['scan-btn','scan-btn-m'].forEach(id=>{const e=ge(id);if(e)e.textContent='▶ 立即掃描';});
-  ['prog-wrap','prog-wrap-m'].forEach(id=>{const e=ge(id);if(e)e.style.display='none';});
+  ge('scan-btn').textContent = '▶ 立即掃描';
   log('掃描已停止', 'w');
 }
 
+// ═══════════════════════════════════════════════
+// 自動掃描
+// ═══════════════════════════════════════════════
 function onAutoChange() {
   toggleAuto();
   saveCfg();
@@ -1378,7 +1367,7 @@ function onAutoChange() {
 
 function toggleAuto() {
   const on = ge('s-auto')?.checked || ge('s-auto-m')?.checked;
-  const led = ge('sw-dot'), btn = ge('auto-btn');
+  const led = ge('sw-led'), btn = ge('auto-btn');
   if (on) {
     const mins = parseInt(gv('s-int')||gv('s-int-m')||'5');
     clearInterval(ST.autoTimer);
@@ -1532,7 +1521,7 @@ async function updateFG(){
 function filterTF(tf) {
   ST.tfFilter = tf;
   document.querySelectorAll('[data-tf]').forEach(b => b.classList.toggle('on', b.dataset.tf===tf));
-  const lbl = ge('tf-lbl-d'); if(lbl) lbl.textContent = tf==='all'?'全部週期':tf;
+  const lbl = ge('tf-lbl'); if(lbl) lbl.textContent = tf==='all'?'全部週期':tf;
   saveCfg();
   renderSignals();
 }
@@ -1719,7 +1708,7 @@ function showSig(idx) {
   const s = filteredSigs()[idx] || ST.signals[idx];
   if (!s) return;
   set('m-sig-title', `${s.sym}USDT · ${s.tf} · ${s.dir==='long'?'做多':'做空'} · 信心${s.conf}/5`);
-  const b = ge('msig-body'); if(!b)return;
+  const b = ge('m-sig-body'); if(!b)return;
 
   const confHTML = s.confDet ? `<div class="conf-panel">
     <div class="conf-panel-title">信心分析（${s.conf}/5 指標同向）</div>
@@ -1767,24 +1756,20 @@ function updateStats() {
   const pnlStr=(pnl>=0?'+$':'-$')+Math.abs(pnl).toFixed(0);
   const wrStr=wr?wr+'%':'—%';
   const wlStr=p.wins+'勝 '+p.losses+'敗';
-  const capStr='$'+p.capital.toFixed(0);
-  const mlSt=p.wins<10?'初期':p.losses<200?'學習中':'成熟';
-  const ms=ST.ml.samples;
-  // 統一更新所有 id（桌面+手機）
-  const S=(id,v,cls)=>{const e=ge(id);if(!e)return;e.textContent=v;if(cls)e.className=cls;};
-  S('st-pnl',pnlStr,'kpi-v '+(pnl>=0?'c-grn':'c-red'));
-  S('st-pnl-m',pnlStr,'kpi-v '+(pnl>=0?'c-grn':'c-red'));
-  S('st-wr',wrStr);S('st-wr-m',wrStr);
-  S('st-wl',wlStr);S('st-wl-m',wlStr);
-  S('st-cap',capStr);S('st-cap-m',capStr);
-  S('st-pos',ST.positions.length+'');S('st-pos-m',ST.positions.length+'');
-  S('st-ml',ms+'');S('st-ml-m',ms+'筆');
-  S('st-mlst',ms<30?'初期':ms<200?'學習中':'成熟');
-  S('st-mlst-m',ms<30?'初期':ms<200?'學習中':'成熟');
-  S('st-today',ST.todayCnt+'');S('st-today-m',ST.todayCnt+'');
-  // topbar
-  const tbp=ge('tb-pnl');if(tbp){tbp.textContent=pnlStr;tbp.className='tb-val '+(pnl>=0?'c-grn':'c-red');}
-  S('tb-wr',wrStr);S('tb-sig',ST.todayCnt+'');S('tb-ml',ms+'筆');
+  const capStr='資金 $'+p.capital.toFixed(0);
+  const set2=(ids,v,cls)=>ids.forEach(id=>{const e=ge(id);if(!e)return;e.textContent=v;if(cls)e.className=cls;});
+  set2(['st-pnl','st-pnl-m'],pnlStr,'stat-val '+(pnl>=0?'c-grn':'c-red'));
+  set2(['st-wr','st-wr-m'],wrStr);
+  set2(['st-wl','st-wl-m'],wlStr);
+  set2(['st-cap','st-cap-m'],capStr);
+  set2(['st-pos','st-pos-m'],ST.positions.length+'');
+  set2(['st-ml','st-ml-m'],ST.ml.samples+'筆');
+  const mlSt=ST.ml.samples<30?'初期':ST.ml.samples<200?'學習中':'成熟';
+  set2(['st-mlst','st-mlst-m'],mlSt);
+  const tbPnl=ge('tb-pnl');if(tbPnl){tbPnl.textContent=pnlStr;tbPnl.className='ts-val '+(pnl>=0?'c-grn':'c-red');}
+  const s=id=>{const e=ge(id);if(e)e.textContent=wr?wr+'%':'—%';};s('tb-wr');
+  const sig=ge('tb-sig');if(sig)sig.textContent=ST.todayCnt;
+  const ml=ge('tb-ml');if(ml)ml.textContent=ST.ml.samples+'筆';
 }
 
 function updateMLDisplay() {
@@ -1798,7 +1783,7 @@ function updateMLDisplay() {
     : s<200
     ? `🟡 中期（${s}/200筆）\n· 混合預測，逐漸準確`
     : `🟢 成熟（${s}筆）\n· 完全ML · 歷史勝率${wr}%`;
-  const ms = ge('ml-stage-txt');
+  const ms = ge('ml-st');
   if (ms) ms.textContent = stage + (s>10&&(s-w)>w*2?'\n⚠️ 虧損率偏高，建議重置ML':'');
 }
 
@@ -1837,9 +1822,9 @@ function log(msg, type='') {
 }
 function clearLog() { ['log','mob-log'].forEach(id=>{ const e=ge(id); if(e)e.innerHTML=''; }); }
 
-function switchMPage(n) {
-  document.querySelectorAll('.m-page').forEach((p,i)=>p.classList.toggle('on',i===n));
-  document.querySelectorAll('.mn-it').forEach((m,i)=>m.classList.toggle('on',i===n));
+function switchPage(n) {
+  document.querySelectorAll('.page').forEach((p,i)=>p.classList.toggle('active',i===n));
+  document.querySelectorAll('.mn-it').forEach((m,i)=>m.classList.toggle('active',i===n));
   if(n===0){renderSignals();}
   if(n===1){renderPositions();renderHistory();drawEquityChart();}
   if(n===2){updateMLDisplay();renderSykes();updateDailyReport();}
@@ -2096,12 +2081,11 @@ function filteredSigs(){
 
 
 function showPanel(id, el) {
-  document.querySelectorAll('.sec-panel').forEach(p=>p.classList.remove('on'));
-  document.querySelectorAll('.sec-tab').forEach(t=>t.classList.remove('on'));
+  document.querySelectorAll('.sec-panel').forEach(p => p.classList.remove('on'));
+  document.querySelectorAll('.sec-tab').forEach(t => t.classList.remove('on'));
   const panel = document.getElementById(id);
   if(panel) panel.classList.add('on');
   if(el) el.classList.add('on');
-  // 切換時刷新數據
   if(id==='p-positions'){renderPositions();}
   if(id==='p-history'){renderHistory();}
   if(id==='p-chart'){drawEquityChart();}
@@ -2109,7 +2093,12 @@ function showPanel(id, el) {
   if(id==='p-sykes'){renderSykes();}
   if(id==='p-daily'){updateDailyReport();}
 }
-
+function switchMPage(n) {
+  document.querySelectorAll('.m-page').forEach((p,i) => p.classList.toggle('on', i===n));
+  document.querySelectorAll('.mn-it').forEach((m,i) => m.classList.toggle('on', i===n));
+  if(n===1){renderPositions();renderHistory();drawEquityChart();}
+  if(n===2){updateMLDisplay();renderSykes();}
+}
 function gradeTag(g){ return g?.includes('A')?'gA':g?.includes('B')?'gB':g?.includes('📊')||g?.includes('察')?'gL':'gC'; }
 function wrColor(wr){ return wr>=70?'var(--grn)':wr>=55?'var(--yel)':'var(--t3)'; }
 function wtLbl(s){ return {bull:'🟢超賣↑',bear:'🔴超買↓',bull_w:'🟡弱多',bear_w:'🟡弱空'}[s]||'—'; }
