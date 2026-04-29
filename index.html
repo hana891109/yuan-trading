@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#03070f">
 <title>YUAN v3</title>
@@ -241,7 +241,7 @@ input[type=number]{background:var(--bg);border:1px solid var(--bd);color:var(--t
 .ind-v{font-family:var(--mono);font-size:9px;font-weight:700}
 
 /* ── LOG ── */
-.log-box{height:120px;overflow-y:auto;font-family:var(--mono);font-size:8px}
+.log-box{height:100px;overflow-y:auto;font-family:var(--mono);font-size:8px;-webkit-overflow-scrolling:touch}
 .log-line{display:flex;gap:6px;padding:2px 0;border-bottom:1px solid rgba(23,42,69,.25)}
 .log-t{color:var(--t3);white-space:nowrap;flex-shrink:0;font-size:7px}
 .lc-ok{color:var(--grn)}.lc-w{color:var(--yel)}.lc-e{color:var(--red)}.lc-i{color:var(--acc)}
@@ -296,8 +296,11 @@ input[type=number]{background:var(--bg);border:1px solid var(--bd);color:var(--t
 /* ═══════════════════════════════════════
    PAGES (mobile)
 ═══════════════════════════════════════ */
-.m-page{display:none;overflow-y:auto;flex:1;min-height:0;padding:9px;
-  flex-direction:column;gap:8px;-webkit-overflow-scrolling:touch}
+.m-page{display:none;overflow-y:auto;overflow-x:hidden;
+  padding:9px;flex-direction:column;gap:8px;
+  -webkit-overflow-scrolling:touch;
+  /* 關鍵：iOS 需要明確的高度 */
+  flex:1;min-height:0;}
 .m-page.on{display:flex}
 
 /* ═══════════════════════════════════════
@@ -306,7 +309,7 @@ input[type=number]{background:var(--bg);border:1px solid var(--bd);color:var(--t
 @media(max-width:899px){
   .sb{display:none}
   .mob-nav{display:block}
-  .body{overflow:hidden;height:calc(100vh - 52px - 52px)}
+  .body{overflow:hidden;height:calc(100vh - 52px - 52px);display:flex;flex-direction:column;}
   .kpi-row{grid-template-columns:repeat(2,1fr);padding:8px}
   .kpi-row .kpi:nth-child(5){grid-column:1/-1}
   .ind-grid{grid-template-columns:repeat(3,1fr)}
@@ -603,7 +606,7 @@ input[type=number]{background:var(--bg);border:1px solid var(--bd);color:var(--t
         <button onclick="clearSigs()" style="background:none;border:none;color:var(--t3);font-size:8px;cursor:pointer;font-family:var(--mono)">清除</button>
       </div>
     </div>
-    <div style="padding:8px;display:flex;flex-direction:column;gap:6px;max-height:calc(100vh - 340px);overflow-y:auto" id="sig-cards"></div>
+    <div style="padding:8px;display:flex;flex-direction:column;gap:6px;" id="sig-cards"></div>
   </div>
   <div class="card">
     <div class="card-hd"><span class="card-ttl">系統記錄</span><button onclick="clearLog()" style="background:none;border:none;color:var(--t3);font-size:7px;cursor:pointer;font-family:var(--mono)">清除</button></div>
@@ -1320,8 +1323,10 @@ async function startScan() {
     newSigs.sort((a,b) => (b.conf||0)-(a.conf||0) || (b.wr||0)-(a.wr||0));
     ST.signals = [...newSigs, ...ST.signals].slice(0, 300);
     sv(KEY.sigs, ST.signals);
-    ST.todayCnt += newSigs.length;
     playAlert('signal');
+    // 更新今日訊號計數顯示
+    ['st-today','st-today-m','tb-sig'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent=ST.todayCnt;});
+    localStorage.setItem(KEY.td, ST.todayCnt);
     toast(`🎯 ${newSigs.length} 個訊號`);
   } else {
     log('無強力訊號', 'w');
