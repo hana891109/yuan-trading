@@ -24,7 +24,7 @@ body{background:var(--bg);color:var(--t1);font-family:var(--body);
 ::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:2px}
 
 /* ── LAYOUT ── */
-.app{display:flex;flex-direction:column;height:100vh;overflow:hidden}
+.app{display:flex;flex-direction:column;height:100vh;overflow:hidden;position:relative}
 
 /* ── TOPBAR ── */
 .topbar{height:52px;flex-shrink:0;background:rgba(3,7,15,.92);border-bottom:1px solid var(--bd);
@@ -296,12 +296,14 @@ input[type=number]{background:var(--bg);border:1px solid var(--bd);color:var(--t
 /* ═══════════════════════════════════════
    PAGES (mobile)
 ═══════════════════════════════════════ */
-.m-page{display:none;overflow-y:auto;overflow-x:hidden;
-  padding:9px;flex-direction:column;gap:8px;
+.m-page{display:none}
+.m-page.on{
+  display:flex;flex-direction:column;gap:8px;
+  overflow-y:auto;overflow-x:hidden;
   -webkit-overflow-scrolling:touch;
-  /* 關鍵：iOS 需要明確的高度 */
-  flex:1;min-height:0;}
-.m-page.on{display:flex}
+  padding:9px 9px calc(9px + var(--safe-b)) 9px;
+  flex:1;min-height:0;
+}
 
 /* ═══════════════════════════════════════
    RESPONSIVE
@@ -309,17 +311,24 @@ input[type=number]{background:var(--bg);border:1px solid var(--bd);color:var(--t
 @media(max-width:899px){
   .sb{display:none}
   .mob-nav{display:block}
-  .body{overflow:hidden;height:calc(100vh - 52px - 52px);display:flex;flex-direction:column;}
+  .main{display:none}
+  .sec-tabs{display:none}
+  .tb-stats{display:none}
   .kpi-row{grid-template-columns:repeat(2,1fr);padding:8px}
   .kpi-row .kpi:nth-child(5){grid-column:1/-1}
   .ind-grid{grid-template-columns:repeat(3,1fr)}
   .px-grid{grid-template-columns:repeat(2,1fr)}
   .pos-grid{grid-template-columns:repeat(2,1fr)}
-  .sec-tabs{display:none}
-  .main{display:none}
-  .body{overflow:hidden}
-  .tb-stats{display:none}
-  header .logo-text-sub{display:none}
+  /* 手機版：body 隱藏，讓 m-page 直接在 app 下面 */
+  .body{display:none}
+  .m-pages-wrap{display:flex;flex-direction:column}
+}
+/* 手機版 m-page 容器 */
+@media(max-width:899px){
+  .m-pages-wrap{display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden}
+}
+@media(min-width:900px){
+  .m-pages-wrap{display:none}
 }
 @media(min-width:900px){
   .mob-nav{display:none}
@@ -327,6 +336,16 @@ input[type=number]{background:var(--bg);border:1px solid var(--bd);color:var(--t
   .sec-tabs,.main{display:flex}
   .main{flex-direction:column}
   .tb-stats{display:flex}
+}
+
+/* 手機頁面容器 */
+.m-pages-wrap{
+  display:none;
+  flex:1;
+  min-height:0;
+  overflow:hidden;
+  /* 為 fixed mob-nav 留出空間 */
+  padding-bottom:52px;
 }
 </style>
 </head>
@@ -553,6 +572,7 @@ input[type=number]{background:var(--bg);border:1px solid var(--bd);color:var(--t
 <!-- ══ MOBILE PAGES ══ -->
 
 <!-- M-PAGE 0: 訊號 -->
+<div class="m-pages-wrap">
 <div class="m-page on" id="mp-0">
   <!-- 掃描控制 -->
   <div class="card">
@@ -698,6 +718,7 @@ input[type=number]{background:var(--bg);border:1px solid var(--bd);color:var(--t
 
 </div><!-- /body -->
 
+</div><!-- /m-pages-wrap -->
 <!-- MOBILE NAV -->
 <div class="mob-nav">
   <div class="mn-list">
