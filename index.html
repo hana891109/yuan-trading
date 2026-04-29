@@ -692,11 +692,22 @@ let ST_EXT = {
   dailyLog:  ld('y3_daily', {}),
 };
 
+// ── ML 污染偵測 ──
+const _rawML = ld(KEY.ml, {samples:0,wins:0,b:0.0,w:[0.15,0.12,0.18,0.08,0.08,0.10,0.12,0.10,0.05,0.07,0.08,0.05]});
+const _mlCorrupted = _rawML.samples > 10 && _rawML.wins >= _rawML.samples;
+if(_mlCorrupted){
+  console.warn('[YUAN] ML污染偵測！wins='+_rawML.wins+'/samples='+_rawML.samples+'，自動重置');
+  localStorage.removeItem(KEY.ml);
+}
+const _cleanML = _mlCorrupted
+  ? {samples:0,wins:0,b:0.0,w:[0.15,0.12,0.18,0.08,0.08,0.10,0.12,0.10,0.05,0.07,0.08,0.05]}
+  : _rawML;
+
 const ST = {
   signals:  ld(KEY.sigs,  []),
   positions:ld(KEY.pos,   []),
   history:  ld(KEY.hist,  []),
-  ml:       ld(KEY.ml,    {samples:0,wins:0,b:0,w:[0.15,0.12,0.18,0.08,0.08,0.10,0.12,0.10,0.05,0.07,0.08,0.05]}),
+  ml: _cleanML,
   paper:    ld(KEY.paper, {capital:10000,pnl:0,wins:0,losses:0}),
   cfg:      ld(KEY.cfg,   {interval:5,minWR:0,minConf:0,paper:true,auto:false,tf:'all'}),
   tfFilter: 'all',
